@@ -38,56 +38,54 @@ object movement {
     } 
 
     def moves():List[Int] = {
-      println("direction.moves start")
       var movelist = List[Int]()
       for (x : Int <- 0 to me.look.exits.length - 1) {
         if (goodmove(me.look.exits(x), previous)) {
           movelist :::= List(x)
         }
       }
-      println("direction.moves end")
       return movelist
     }
   }
 
-  class nextmove(location : direction) {
+  class movenext(location : direction) {
     var position = location
-    var nextdirection = findmove
+    var nextmove = findmove
 
     def findmove() : String = {
       var dir = ""
-      println("Findmove is starting")
-      println(position.possiblemoves.length)
       if (me.look.exits.length == 1) {
-        dir = me.look.exits(0)
+        me.look.exits(0)
       } else if (position.possiblemoves.length >= 1) {
-        dir = me.look.exits(position.possiblemoves(0))
+        me.look.exits(position.possiblemoves(0))
       } else {
-        dir = "none"
+        "none"
       }
-      println("Findmove is ending")
-      return dir
+    }
+  }
+
+  class battle() {
+    def kobold() = {
+        weapon.use(me.look.monsters(0))
     }
   }
 
   class movetostop() {
-
+    var fight = new battle
     def continue():Boolean = {
-      println("continue start")
       (me.look.features.isEmpty && me.look.monsters.isEmpty && me.look.adventurers.isEmpty && !me.look.exits.isEmpty)
     }
 
     def move(first : String) = { 
       var position = new direction(first)
-      println("movetostop.move start")
       while (continue) {
-        println("whileloop start")
-        var next = new nextmove(position)
-        position = new direction(next.findmove)
-        me.move(next.findmove)
-        println(me.look.exits)å
-        println(next.findmove)
-        println("Whileloop end")
+        var next = new movenext(position)
+        position = new direction(next.nextmove)
+        me.move(next.nextmove)
+        if (me.look.monsters(0).name == "kobold") {
+          fight.kobold
+          position = new direction(next.nextmove)
+        }
       }
       if (!continue) {
         me.look
