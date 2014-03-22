@@ -1,4 +1,5 @@
 
+
 object movement {
   class direction(dir : String) {
     var current :String = findFirst(dir)
@@ -55,23 +56,18 @@ object movement {
     def findmove() : String = {
       var dir = ""
       if (me.look.exits.length == 1) {
-        me.look.exits(0)
+        dir = me.look.exits(0)
       } else if (position.possiblemoves.length >= 1) {
-        me.look.exits(position.possiblemoves(0))
+        dir = me.look.exits(position.possiblemoves(0))
       } else {
-        "none"
+        dir = "none"
       }
-    }
-  }
-
-  class battle() {
-    def kobold() = {
-        weapon.use(me.look.monsters(0))
+      return dir
     }
   }
 
   class movetostop() {
-    var fight = new battle
+    var fight = new monster.battle
     def continue():Boolean = {
       (me.look.features.isEmpty && me.look.monsters.isEmpty && me.look.adventurers.isEmpty && !me.look.exits.isEmpty)
     }
@@ -82,8 +78,14 @@ object movement {
         var next = new movenext(position)
         position = new direction(next.nextmove)
         me.move(next.nextmove)
-        if (me.look.monsters(0).name == "kobold") {
+        if (me.look.monsters(0).name == "ogre") {
+          fight.ogre
+          position = new direction(next.nextmove)
+        } else if (me.look.monsters(0).name == "kobold") {
           fight.kobold
+          position = new direction(next.nextmove)
+        } else if (me.look.monsters(0).name == "elf") {
+          fight.elf
           position = new direction(next.nextmove)
         }
       }
@@ -94,6 +96,40 @@ object movement {
   }
 }
 
-var legs = new movement.movetostop
+object monster {
+  class create() {
+    case class SwordMold(hilt : Item, blade : Item)
+    case class MaceMold(handle : Item, head : Item)
+    case class SpearMold(pole : Item, tip : Item)
 
+    var stick, plank, ingot, diamond, weapon = me.inventory(0)
+
+    def initialise {  
+        stick = retrieve("stick").head
+        plank = retrieve("plank").head
+        ingot = retrieve("ingot").head
+        diamond = retrieve("diamond").head
+    }
+
+    def dismantle() = {weapon.separate}
+    def sword1() {case class SwordMold(hilt : Item, blade : Item); me.combine(new SwordMold(retrieve("stick").head.asInstanceOf[Item], retrieve("diamond").head.asInstanceOf[Item])).head}
+    def sword():Item = {case class SwordMold(hilt : Item, blade : Item); initialise; me.combine(new SwordMold(stick, diamond)).head}
+    def mace():Item  = {initialise; me.combine(new MaceMold(stick, diamond)).head}
+    def spear():Item  = {initialise; me.combine(new SpearMold(stick.asInstanceOf[Item], diamond.asInstanceOf[Item])).head}
+  }
+
+  class battle() {
+    var build = new create
+    var weapon = build.weapon
+    def heal() {if (me.hearts < 5) {retrieve("potion").head.use}}
+    def strike() = weapon.use(me.look.monsters(0))
+    def exists():Boolean = (!me.look.monsters.isEmpty)
+    def attack() {while (exists) {strike; heal}}
+    def ogre() = {weapon = build.sword; attack; build.dismantle}
+    def kobold() = {weapon = build.mace; attack; build.dismantle}
+    def elf() = {weapon = build.spear; attack; build.dismantle}
+  }
+}
+
+var build = new monster.create
 
