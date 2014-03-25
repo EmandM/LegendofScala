@@ -58,7 +58,8 @@ object movement {
       if (me.look.exits.length == 1) {
         dir = me.look.exits(0)
       } else if (position.possiblemoves.length >= 1) {
-        dir = me.look.exits(position.possiblemoves(0))
+        var num = new scala.util.Random()
+        dir = me.look.exits(position.possiblemoves(num.nextInt(position.possiblemoves.length)))
       } else {
         dir = "none"
       }
@@ -67,27 +68,44 @@ object movement {
   }
 
   class movetostop() {
-    var fight = new monster.battle
+    var steps = 0
     def continue():Boolean = {
-      (me.look.features.isEmpty && me.look.monsters.isEmpty && me.look.adventurers.isEmpty && !me.look.exits.isEmpty)
+      (me.look.features.isEmpty && me.look.monsters.isEmpty && me.look.adventurers.isEmpty && !me.look.exits.isEmpty && steps < 15)
     }
 
     def move(first : String) = { 
+      steps = 0
       var position = new direction(first)
       while (continue) {
         var next = new movenext(position)
         position = new direction(next.nextmove)
         me.move(next.nextmove)
-        if (me.look.monsters(0).name == "ogre") {
-          fight.ogre
-          position = new direction(next.nextmove)
-        } else if (me.look.monsters(0).name == "kobold") {
-          fight.kobold
-          position = new direction(next.nextmove)
-        } else if (me.look.monsters(0).name == "elf") {
-          fight.elf
-          position = new direction(next.nextmove)
+        steps += 1
+        if (!me.look.monsters.isEmpty) {
+          if (me.look.monsters(0).name == "ogre") {
+            fightOgre
+            position = new direction(next.nextmove)
+          } else if (me.look.monsters(0).name == "kobold") {
+            fightKobold
+            position = new direction(next.nextmove)
+          } else if (me.look.monsters(0).name == "elf") {
+            fightElf
+            position = new direction(next.nextmove)
+          } 
         }
+        if (steps >= 15) {
+          println("Travelled " + steps + " steps. Would you like to continue? (y/n) ")
+          var answer = Console.readChar()
+            if (answer == 'y') {
+              steps = 0
+            } else if (answer == 'n') {
+                println("\nEnding movement.")
+                me.look; showMap
+            } else {
+              println("\nYou entered something other than y or n. Ending movement.")
+              me.look; showMap
+            }
+          }
       }
       if (!continue) {
         me.look
@@ -96,40 +114,4 @@ object movement {
   }
 }
 
-object monster {
-  class create() {
-    case class SwordMold(hilt : Item, blade : Item)
-    case class MaceMold(handle : Item, head : Item)
-    case class SpearMold(pole : Item, tip : Item)
-
-    var stick, plank, ingot, diamond, weapon = me.inventory(0)
-
-    def initialise {  
-        stick = retrieve("stick").head
-        plank = retrieve("plank").head
-        ingot = retrieve("ingot").head
-        diamond = retrieve("diamond").head
-    }
-
-    def dismantle() = {weapon.separate}
-    def sword1() {case class SwordMold(hilt : Item, blade : Item); me.combine(new SwordMold(retrieve("stick").head.asInstanceOf[Item], retrieve("diamond").head.asInstanceOf[Item])).head}
-    def sword():Item = {case class SwordMold(hilt : Item, blade : Item); initialise; me.combine(new SwordMold(stick, diamond)).head}
-    def mace():Item  = {initialise; me.combine(new MaceMold(stick, diamond)).head}
-    def spear():Item  = {initialise; me.combine(new SpearMold(stick.asInstanceOf[Item], diamond.asInstanceOf[Item])).head}
-  }
-
-  class battle() {
-    var build = new create
-    var weapon = build.weapon
-    def heal() {if (me.hearts < 5) {retrieve("potion").head.use}}
-    def strike() = weapon.use(me.look.monsters(0))
-    def exists():Boolean = (!me.look.monsters.isEmpty)
-    def attack() {while (exists) {strike; heal}}
-    def ogre() = {weapon = build.sword; attack; build.dismantle}
-    def kobold() = {weapon = build.mace; attack; build.dismantle}
-    def elf() = {weapon = build.spear; attack; build.dismantle}
-  }
-}
-
-var build = new monster.create
-
+var legs = new movement.movetostop
